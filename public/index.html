@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Mini Chat</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background: #f2f2f2;
+    }
+    #chatbox {
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      height: 300px;
+      padding: 10px;
+      overflow-y: auto;
+      background: #fff;
+      margin-bottom: 10px;
+    }
+    .message {
+      margin: 5px 0;
+      padding: 5px 10px;
+      border-radius: 4px;
+      background: #e0e0e0;
+      max-width: 80%;
+    }
+    .timestamp {
+      font-size: 0.8em;
+      color: #666;
+      margin-right: 5px;
+    }
+    #messageInput {
+      width: 70%;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    #sendButton {
+      padding: 10px 20px;
+      border: none;
+      background: #4CAF50;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-left: 5px;
+    }
+    #sendButton:hover {
+      background: #45a049;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Mini Chat</h2>
+
+  <div id="chatbox"></div>
+
+  <input type="text" id="messageInput" placeholder="Tape ton message...">
+  <button id="sendButton">Envoyer</button>
+
+  <script>
+    const chatbox = document.getElementById('chatbox');
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+  
+    let pseudo = '';
+    while (!pseudo) {
+      pseudo = prompt("Quel est ton pseudo ?");
+    }
+  
+    const ws = new WebSocket('ws://localhost:3000');
+  
+    ws.onopen = () => {
+      console.log('Connecté au serveur WebSocket');
+      ws.send(JSON.stringify({ type: 'join', pseudo }));
+    };
+  
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+  
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const time = `${hours}:${minutes}`;
+  
+        const msgElement = document.createElement('div');
+        msgElement.className = 'message';
+  
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'timestamp';
+        timeSpan.textContent = `[${time}] `;
+  
+        const userSpan = document.createElement('strong');
+        userSpan.textContent = data.pseudo ? `${data.pseudo}: ` : '';
+  
+        msgElement.appendChild(timeSpan);
+        msgElement.appendChild(userSpan);
+        msgElement.appendChild(document.createTextNode(data.message));
+        chatbox.appendChild(msgElement);
+        chatbox.scrollTop = chatbox.scrollHeight;
+      } catch (err) {
+        console.error("Erreur de parsing message WebSocket :", err);
+      }
+    };
+  
+    sendButton.addEventListener('click', () => {
+      const message = messageInput.value.trim();
+      if (message) {
+        ws.send(JSON.stringify({ type: 'message', pseudo, message }));
+        messageInput.value = '';
+      }
+    });
+  
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        sendButton.click();
+      }
+    });
+  </script>
+
+</body>
+</html>
